@@ -4,6 +4,10 @@ import cv2
 import numpy as np
 import mediapipe as mp
 
+# config.py está en la carpeta de arriba (raíz del proyecto)
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import config
+
 OJO_I = [33, 160, 158, 133, 153, 144]
 OJO_D = [362, 385, 387, 263, 373, 380]
 DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),"dataset")
@@ -29,7 +33,7 @@ def main():
     cont = {t: len(os.listdir(f"{carpeta}/{t}")) for t in ("abiertos", "cerrados")}
     malla = mp.solutions.face_mesh.FaceMesh(max_num_faces=1, refine_landmarks=True,
                                             min_detection_confidence=0.5, min_tracking_confidence=0.5)
-    cam = cv2.VideoCapture(0)
+    cam = cv2.VideoCapture(config.CAMARA)
     modo = None
     print("Sesion:", sesion)
     print("a = guardar ABIERTOS   c = guardar CERRADOS   s = parar   q = salir")

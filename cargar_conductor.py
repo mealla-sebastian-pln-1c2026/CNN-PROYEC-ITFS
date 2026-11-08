@@ -1,5 +1,6 @@
 import argparse
 import cv2
+import config
 import db
 import rostro
 
@@ -7,7 +8,7 @@ import rostro
 def main(nombre, contacto, n=40):
     db.init()
     cid = db.agregar_conductor(nombre, contacto)
-    cam = cv2.VideoCapture(0)
+    cam = cv2.VideoCapture(config.CAMARA)
     cont = 0
     while cont < n:
         ok, frame = cam.read()

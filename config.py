@@ -3,6 +3,10 @@ import os
 # El token de Telegram se lee de la variable de entorno TG_TOKEN (no se guarda en el código)
 TG_TOKEN = os.environ.get("TG_TOKEN", "")
 
+# Índice de la cámara para OpenCV. En esta PC: 0 = Iriun Webcam (virtual), 1 = Logitech C505.
+# Si cambia el orden (otro puerto USB, otra cámara), ajustar solo este número.
+CAMARA = 1
+
 UMBRAL_ROSTRO = 70
 FRAMES_CONFIRMAR = 15
 
