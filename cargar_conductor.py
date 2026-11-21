@@ -8,7 +8,7 @@ import rostro
 def main(nombre, contacto, n=40):
     db.init()
     cid = db.agregar_conductor(nombre, contacto)
-    cam = cv2.VideoCapture(config.CAMARA)
+    cam = cv2.VideoCapture(config.CAMARA, cv2.CAP_DSHOW)
     cont = 0
     while cont < n:
         ok, frame = cam.read()

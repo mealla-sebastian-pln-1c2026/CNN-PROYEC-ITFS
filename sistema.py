@@ -117,7 +117,7 @@ def identificar():
         return None, ""
     reco = cv2.face.LBPHFaceRecognizer_create()
     reco.train(caras, np.array(labels))
-    cam = cv2.VideoCapture(config.CAMARA)
+    cam = cv2.VideoCapture(config.CAMARA, cv2.CAP_DSHOW)
     elegido, nombre, estable = None, "", 0
     t0 = time.time()
     while time.time() - t0 < 30:
@@ -154,7 +154,7 @@ def identificar():
 def somnolencia(nombre, chat):
     malla = mp.solutions.face_mesh.FaceMesh(max_num_faces=1, refine_landmarks=True,
                                             min_detection_confidence=0.5, min_tracking_confidence=0.5)
-    cam = cv2.VideoCapture(config.CAMARA)
+    cam = cv2.VideoCapture(config.CAMARA, cv2.CAP_DSHOW)
     ard = abrir_arduino()
     cerrado, alarma, micros, ultimo = None, False, 0, 0
     sin_rostro = None

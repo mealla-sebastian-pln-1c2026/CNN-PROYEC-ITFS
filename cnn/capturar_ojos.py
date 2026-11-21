@@ -33,7 +33,7 @@ def main():
     cont = {t: len(os.listdir(f"{carpeta}/{t}")) for t in ("abiertos", "cerrados")}
     malla = mp.solutions.face_mesh.FaceMesh(max_num_faces=1, refine_landmarks=True,
                                             min_detection_confidence=0.5, min_tracking_confidence=0.5)
-    cam = cv2.VideoCapture(config.CAMARA)
+    cam = cv2.VideoCapture(config.CAMARA, cv2.CAP_DSHOW)
     modo = None
     print("Sesion:", sesion)
     print("a = guardar ABIERTOS   c = guardar CERRADOS   s = parar   q = salir")
