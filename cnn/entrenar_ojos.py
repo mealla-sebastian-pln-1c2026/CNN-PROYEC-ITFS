@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 import tf_keras as keras
 import tf2onnx
+import sys
 
 DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dataset")
 SALIDA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ojos.onnx")
@@ -28,11 +29,41 @@ def cargar(sesiones):
 
 
 def main():
-    X, Y = cargar()
+    if len(sys.argv) > 1:
+        sesiones = sys.argv[1:]                 # las que escribiste: s1 s2
+    elif os.path.isdir(DIR):
+        sesiones = sorted(os.listdir(DIR))      # si no escribiste nada: todas
+    else:
+        print("No existe", DIR, "- captura primero con capturar_ojos.py")
+        return
+    print("Sesiones:", sesiones)
+    X, Y = cargar(sesiones)
     print(f"Muestras: {len(X)}  (abiertos={(Y == 0).sum()}, cerrados={(Y == 1).sum()})")
     if len(X) < 20:
         print("Pocas muestras. Captura mas con capturar_ojos.py")
         return
+    orden = np.random.permutation(len(X))   # orden al azar
+    X, Y = X[orden], Y[orden]
+     # 1. Separar validación a mano (ya no usamos validation_split)
+    n_val = int(len(X) * 0.2)
+    X_val, Y_val = X[:n_val], Y[:n_val]
+    X_tr, Y_tr = X[n_val:], Y[n_val:]
+
+    # 2. Las transformaciones al azar (solo para entrenar)
+    aumento = keras.Sequential([
+        keras.layers.RandomFlip("horizontal"),                  # espejado
+        keras.layers.RandomRotation(0.03),                      # giro de ±11°
+        keras.layers.RandomBrightness(0.2, value_range=(0, 1)), # ±20 % de luz
+        keras.layers.RandomContrast(0.2),                       # ±20 % de contraste
+    ])
+
+    # 3. Armar los lotes de entrenamiento con augmentation
+    entreno = (tf.data.Dataset.from_tensor_slices((X_tr, Y_tr))
+               .shuffle(len(X_tr))
+               .batch(32)
+               .map(lambda x, y: (tf.clip_by_value(aumento(x, training=True), 0, 1), y)))
+
+    # 4. El modelo: igual que antes
     m = keras.Sequential([
         keras.layers.Input((24, 24, 1)),
         keras.layers.Conv2D(16, 3, activation="relu"),
@@ -45,7 +76,7 @@ def main():
         keras.layers.Dense(1, activation="sigmoid"),
     ])
     m.compile("adam", "binary_crossentropy", metrics=["accuracy"])
-    m.fit(X, Y, epochs=15, batch_size=32, validation_split=0.2)
+    m.fit(entreno, validation_data=(X_val, Y_val), epochs=15)
     spec = (tf.TensorSpec((None, 24, 24, 1), tf.float32, name="input"),)
     tf2onnx.convert.from_keras(m, input_signature=spec, opset=13, output_path=SALIDA)
     print("Modelo CNN exportado en", SALIDA)
