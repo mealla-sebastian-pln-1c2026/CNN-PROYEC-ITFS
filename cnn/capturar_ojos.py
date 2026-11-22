@@ -15,10 +15,10 @@ DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),"dataset")
 
 def recorte(gray, pts, idx, m=0.6):
     xs, ys = pts[idx, 0], pts[idx, 1]
-    x1, x2, y1, y2 = xs.min(), xs.max(), ys.min(), ys.max()
-    w, h = x2 - x1, y2 - y1
-    x1, x2 = int(max(0, x1 - w * m)), int(x2 + w * m)
-    y1, y2 = int(max(0, y1 - h * m)), int(y2 + h * m)
+    cx, cy = xs.mean(), ys.mean()                    # centro del ojo
+    lado = (xs.max() - xs.min()) * (1 + 2 * m)       # cuadrado según el ANCHO
+    x1, y1 = int(max(0, cx - lado / 2)), int(max(0, cy - lado / 2))
+    x2, y2 = int(cx + lado / 2), int(cy + lado / 2)
     c = gray[y1:y2, x1:x2]
     if c.size == 0:
         return None

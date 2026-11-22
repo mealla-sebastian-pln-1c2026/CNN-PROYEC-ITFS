@@ -23,12 +23,12 @@ ONNX = os.path.join(os.path.dirname(os.path.abspath(__file__)),"cnn", "ojos.onnx
 CNN = cv2.dnn.readNetFromONNX(ONNX) if os.path.exists(ONNX) else None
 
 
-def _recorte_ojo(gray, pts, idx, m=0.6):
+def recorte_ojo (gray, pts, idx, m=0.6):
     xs, ys = pts[idx, 0], pts[idx, 1]
-    x1, x2, y1, y2 = xs.min(), xs.max(), ys.min(), ys.max()
-    w, h = x2 - x1, y2 - y1
-    x1, x2 = int(max(0, x1 - w * m)), int(x2 + w * m)
-    y1, y2 = int(max(0, y1 - h * m)), int(y2 + h * m)
+    cx, cy = xs.mean(), ys.mean()                    # centro del ojo
+    lado = (xs.max() - xs.min()) * (1 + 2 * m)       # cuadrado según el ANCHO
+    x1, y1 = int(max(0, cx - lado / 2)), int(max(0, cy - lado / 2))
+    x2, y2 = int(cx + lado / 2), int(cy + lado / 2)
     c = gray[y1:y2, x1:x2]
     if c.size == 0:
         return None
@@ -38,7 +38,7 @@ def _recorte_ojo(gray, pts, idx, m=0.6):
 def prob_cerrado(gray, pts):
     probs = []
     for idx in (OJO_I, OJO_D):
-        c = _recorte_ojo(gray, pts, idx)
+        c = recorte_ojo(gray, pts, idx)
         if c is None:
             continue
         blob = (c.astype("float32") / 255.0).reshape(1, 24, 24, 1)
