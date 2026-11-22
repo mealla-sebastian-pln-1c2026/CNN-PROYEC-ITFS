@@ -27,6 +27,28 @@ def cargar(sesiones):
     Y = np.array(Y, dtype="float32")
     return X, Y
 
+def evaluar(m, X, Y, titulo="Validación"):
+    p = m.predict(X, verbose=0).ravel()        # probabilidad de "cerrado" de cada foto
+    pred = (p > 0.5).astype(int)               # 1 = cerrado, 0 = abierto
+    real = Y.astype(int)
+
+    vn = int(((real == 0) & (pred == 0)).sum())   # abierto  -> dijo abierto  (bien)
+    fp = int(((real == 0) & (pred == 1)).sum())   # abierto  -> dijo cerrado  (falsa alarma)
+    fn = int(((real == 1) & (pred == 0)).sum())   # cerrado  -> dijo abierto  (¡dormido sin alarma!)
+    vp = int(((real == 1) & (pred == 1)).sum())   # cerrado  -> dijo cerrado  (bien)
+
+    accuracy = (vp + vn) / len(real)
+    recall = vp / (vp + fn) if vp + fn else float("nan")
+    precision = vp / (vp + fp) if vp + fp else float("nan")
+
+    print(f"\n=== {titulo}: {len(real)} fotos ===")
+    print("                   dijo ABIERTO   dijo CERRADO")
+    print(f"  era ABIERTO      {vn:>10}   {fp:>12}")
+    print(f"  era CERRADO      {fn:>10}   {vp:>12}")
+    print(f"  Accuracy:            {accuracy:.3f}")
+    print(f"  Recall cerrados:     {recall:.3f}   <- de los ojos cerrados, cuántos detectó")
+    print(f"  Precision cerrados:  {precision:.3f}   <- de las alarmas, cuántas eran reales")
+
 
 def main():
     if len(sys.argv) > 1:
@@ -77,6 +99,7 @@ def main():
     ])
     m.compile("adam", "binary_crossentropy", metrics=["accuracy"])
     m.fit(entreno, validation_data=(X_val, Y_val), epochs=15)
+    evaluar(m, X_val, Y_val)
     spec = (tf.TensorSpec((None, 24, 24, 1), tf.float32, name="input"),)
     tf2onnx.convert.from_keras(m, input_signature=spec, opset=13, output_path=SALIDA)
     print("Modelo CNN exportado en", SALIDA)
