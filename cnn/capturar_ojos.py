@@ -34,12 +34,16 @@ def main():
     malla = mp.solutions.face_mesh.FaceMesh(max_num_faces=1, refine_landmarks=True,
                                             min_detection_confidence=0.5, min_tracking_confidence=0.5)
     cam = cv2.VideoCapture(config.CAMARA, cv2.CAP_DSHOW)
+    if not cam.isOpened():
+        print(f"No se pudo abrir la cámara {config.CAMARA}. ¿Está conectada? Revisá CAMARA en config.py")
+        return
     modo = None
     print("Sesion:", sesion)
     print("a = guardar ABIERTOS   c = guardar CERRADOS   s = parar   q = salir")
     while True:
         ok, frame = cam.read()
         if not ok:
+            print("La cámara dejó de enviar imagen (¿se desconectó?)")
             break
         h, w = frame.shape[:2]
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)

@@ -3,7 +3,7 @@ import os
 # El token de Telegram se lee de la variable de entorno TG_TOKEN (no se guarda en el código)
 TG_TOKEN = os.environ.get("TG_TOKEN", "")
 
-# Índice de la cámara para OpenCV. En esta PC: 0 = Iriun Webcam (virtual), 1 = Logitech C505.
+# Índice de la cámara para OpenCV. En esta PC: 0 = Logitech C505, 1 = Iriun Webcam (virtual).
 # Si cambia el orden (otro puerto USB, otra cámara), ajustar solo este número.
 # Los scripts la abren con cv2.CAP_DSHOW: con el backend por defecto (MSMF) la Logitech tarda ~1 minuto en abrir.
 CAMARA = 0

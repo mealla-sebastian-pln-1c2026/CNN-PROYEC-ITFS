@@ -5,16 +5,19 @@ import db
 import rostro
 import time
 
-
 def main(nombre, contacto, n=40):
+    cam = cv2.VideoCapture(config.CAMARA, cv2.CAP_DSHOW)
+    if not cam.isOpened():
+        print(f"No se pudo abrir la cámara {config.CAMARA}. ¿Está conectada? Revisá CAMARA en config.py")
+        return
     db.init()
     cid = db.agregar_conductor(nombre, contacto)
-    cam = cv2.VideoCapture(config.CAMARA, cv2.CAP_DSHOW)
     cont = 0
     ultimo = 0
     while cont < n:
         ok, frame = cam.read()
         if not ok:
+            print("La cámara dejó de enviar imagen (¿se desconectó?)")
             break
         r = rostro.detectar_rostro(frame)
         if r and time.time() - ultimo >= 0.2:   # una foto cada 0,2 s como máximo

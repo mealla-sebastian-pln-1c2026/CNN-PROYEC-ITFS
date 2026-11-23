@@ -118,11 +118,15 @@ def identificar():
     reco = cv2.face.LBPHFaceRecognizer_create()
     reco.train(caras, np.array(labels))
     cam = cv2.VideoCapture(config.CAMARA, cv2.CAP_DSHOW)
+    if not cam.isOpened():
+        print(f"No se pudo abrir la cámara {config.CAMARA}. ¿Está conectada? Revisá CAMARA en config.py")
+        return None, ""
     elegido, nombre, estable = None, "", 0
     t0 = time.time()
     while time.time() - t0 < 30:
         ok, frame = cam.read()
         if not ok:
+            print("La cámara dejó de enviar imagen (¿se desconectó?)")
             break
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         r = rostro.detectar_rostro(frame)
@@ -155,6 +159,10 @@ def somnolencia(nombre, chat):
     malla = mp.solutions.face_mesh.FaceMesh(max_num_faces=1, refine_landmarks=True,
                                             min_detection_confidence=0.5, min_tracking_confidence=0.5)
     cam = cv2.VideoCapture(config.CAMARA, cv2.CAP_DSHOW)
+    if not cam.isOpened():
+        print(f"No se pudo abrir la cámara {config.CAMARA}. ¿Está conectada? Revisá CAMARA en config.py")
+        malla.close()
+        return
     ard = abrir_arduino()
     cerrado, alarma, micros, ultimo = None, False, 0, 0
     sin_rostro = None
@@ -162,6 +170,7 @@ def somnolencia(nombre, chat):
     while True:
         ok, frame = cam.read()
         if not ok:
+            print("La cámara dejó de enviar imagen (¿se desconectó?)")
             break
         h, w = frame.shape[:2]
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
