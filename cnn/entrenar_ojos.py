@@ -51,14 +51,25 @@ def evaluar(m, X, Y, titulo="Validación"):
 
 
 def main():
-    if len(sys.argv) > 1:
-        sesiones = sys.argv[1:]                 # las que escribiste: s1 s2
+    args = sys.argv[1:]
+    val_sesion = None                           # sesión que se usa SOLO para validar
+    if "--val" in args:
+        i = args.index("--val")
+        if i + 1 >= len(args):
+            print("Falta el nombre de la sesión después de --val (ejemplo: --val s3)")
+            return
+        val_sesion = args[i + 1]
+        args = args[:i] + args[i + 2:]          # sacar "--val s3" de la lista
+    if args:
+        sesiones = args                         # las que escribiste: s1 s2
     elif os.path.isdir(DIR):
         sesiones = sorted(os.listdir(DIR))      # si no escribiste nada: todas
     else:
         print("No existe", DIR, "- captura primero con capturar_ojos.py")
         return
-    print("Sesiones:", sesiones)
+    if val_sesion in sesiones:
+        sesiones.remove(val_sesion)             # nunca entrenar con la de validación
+    print("Entrenar con:", sesiones, "  Validar con:", val_sesion or "20 % al azar")
     X, Y = cargar(sesiones)
     print(f"Muestras: {len(X)}  (abiertos={(Y == 0).sum()}, cerrados={(Y == 1).sum()})")
     if len(X) < 20:
@@ -66,11 +77,17 @@ def main():
         return
     orden = np.random.permutation(len(X))   # orden al azar
     X, Y = X[orden], Y[orden]
-     # 1. Separar validación a mano (ya no usamos validation_split)
-    n_val = int(len(X) * 0.2)
-    X_val, Y_val = X[:n_val], Y[:n_val]
-    X_tr, Y_tr = X[n_val:], Y[n_val:]
-
+    # 1. Separar validación
+    if val_sesion:
+        X_tr, Y_tr = X, Y                       # todo lo cargado es para entrenar
+        X_val, Y_val = cargar([val_sesion])     # la validación es una sesión que nunca vio
+        if len(X_val) == 0:
+            print("La sesión", val_sesion, "no tiene fotos")
+            return
+    else:
+        n_val = int(len(X) * 0.2)
+        X_val, Y_val = X[:n_val], Y[:n_val]
+        X_tr, Y_tr = X[n_val:], Y[n_val:] 
     # 2. Las transformaciones al azar (solo para entrenar)
     aumento = keras.Sequential([
         keras.layers.RandomFlip("horizontal"),                  # espejado

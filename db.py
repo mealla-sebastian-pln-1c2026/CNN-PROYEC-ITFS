@@ -22,7 +22,8 @@ def agregar_conductor(nombre, chat_id):
     c = _c()
     cur = c.cursor()
     cur.execute("INSERT OR IGNORE INTO conductores(nombre, chat_id) VALUES(?,?)", (nombre, chat_id))
-    cur.execute("UPDATE conductores SET chat_id=? WHERE nombre=?", (chat_id, nombre))
+    if chat_id:                                 # solo si me pasaron un contacto nuevo
+        cur.execute("UPDATE conductores SET chat_id=? WHERE nombre=?", (chat_id, nombre))
     c.commit()
     cur.execute("SELECT id FROM conductores WHERE nombre=?", (nombre,))
     cid = cur.fetchone()[0]
