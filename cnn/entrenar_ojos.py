@@ -63,7 +63,7 @@ def main():
     if args:
         sesiones = args                         # las que escribiste: s1 s2
     elif os.path.isdir(DIR):
-        sesiones = sorted(os.listdir(DIR))      # si no escribiste nada: todas
+            sesiones = [s for s in sorted(os.listdir(DIR)) if s != "prueba"]   # todas menos la de prueba
     else:
         print("No existe", DIR, "- captura primero con capturar_ojos.py")
         return

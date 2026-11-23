@@ -24,6 +24,10 @@ def recorte(gray, pts, idx, m=0.6):
         return None
     return cv2.resize(c, (24, 24))
 
+def ear(p):
+    v = np.linalg.norm(p[1] - p[5]) + np.linalg.norm(p[2] - p[4])
+    h = 2 * np.linalg.norm(p[0] - p[3])
+    return v / (h + 1e-8)
 
 def main():
     sesion = sys.argv[1] if len(sys.argv) > 1 else "s1"
@@ -31,6 +35,7 @@ def main():
     for t in ("abiertos", "cerrados"):
         os.makedirs(f"{carpeta}/{t}", exist_ok=True)
     cont = {t: len(os.listdir(f"{carpeta}/{t}")) for t in ("abiertos", "cerrados")}
+    csv = open(f"{carpeta}/ear.csv", "a", encoding="utf-8") 
     malla = mp.solutions.face_mesh.FaceMesh(max_num_faces=1, refine_landmarks=True,
                                             min_detection_confidence=0.5, min_tracking_confidence=0.5)
     cam = cv2.VideoCapture(config.CAMARA, cv2.CAP_DSHOW)
@@ -55,6 +60,7 @@ def main():
                 c = recorte(gray, pts, idx)
                 if c is not None:
                     cv2.imwrite(f"{carpeta}/{modo}/{cont[modo]}.png", c)
+                    csv.write(f"{modo}/{cont[modo]}.png,{ear(pts[idx]):.4f}\n")
                     cont[modo] += 1
         cv2.putText(frame, f"{sesion}  modo:{modo}  abiertos:{cont['abiertos']}  cerrados:{cont['cerrados']}",
                     (15, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
@@ -69,6 +75,7 @@ def main():
         elif k == ord("q"):
             break
     cam.release()
+    csv.close()
     cv2.destroyAllWindows()
     print("Guardado:", sesion, cont)
 
