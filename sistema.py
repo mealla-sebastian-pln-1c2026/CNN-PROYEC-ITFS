@@ -10,6 +10,8 @@ import pyttsx3
 import db
 import config
 import rostro
+import json
+import unicodedata
 
 TTS = pyttsx3.init()
 OJO_I = [33, 160, 158, 133, 153, 144]
@@ -81,6 +83,13 @@ def abrir_arduino():
 
 def hablar(texto):
     threading.Thread(target=lambda: (TTS.say(texto), TTS.runAndWait()), daemon=True).start()
+AVISO = {"texto": "", "color": (0, 200, 0), "hasta": 0.0}   # cartel que se muestra unos segundos
+
+
+def mostrar_aviso(texto, color, seg=5):
+    # cv2.putText no dibuja tildes ni ñ: "José Peña" -> "Jose Pena"
+    texto = unicodedata.normalize("NFKD", texto).encode("ascii", "ignore").decode()
+    AVISO.update(texto=texto, color=color, hasta=time.time() + seg)
 
 
 def telegram(chat, texto):
@@ -89,9 +98,24 @@ def telegram(chat, texto):
     url = "https://api.telegram.org/bot%s/sendMessage?%s" % (
         config.TG_TOKEN, urllib.parse.urlencode({"chat_id": chat, "text": texto}))
     try:
-        urllib.request.urlopen(url, timeout=10)
+        r = json.loads(urllib.request.urlopen(url, timeout=10).read().decode())
+        ch = r["result"]["chat"]                 # Telegram devuelve a quién le llegó
+        quien = f"{ch.get('first_name', '')} {ch.get('last_name') or ''}".strip() or "el contacto"
+        mostrar_aviso(f"Alerta enviada por Telegram a {quien}", (0, 200, 0))
     except Exception:
-        pass
+        mostrar_aviso("No se pudo enviar la alerta por Telegram", (0, 0, 255))
+
+
+def dibujar_aviso(frame):
+    if time.time() > AVISO["hasta"]:
+        return
+    h, w = frame.shape[:2]
+    (tw, th), _ = cv2.getTextSize(AVISO["texto"], FUENTE, 0.6, 2)
+    x1, y1 = (w - tw) // 2 - 16, 75                       # centrado, debajo de la banda de arriba
+    x2, y2 = x1 + tw + 32, y1 + th + 24
+    cv2.rectangle(frame, (x1, y1), (x2, y2), (40, 40, 40), -1)
+    cv2.rectangle(frame, (x1, y1), (x2, y2), AVISO["color"], 2)
+    cv2.putText(frame, AVISO["texto"], (x1 + 16, y2 - 12), FUENTE, 0.6, BLANCO, 2, cv2.LINE_AA)
 
 
 def ear(p):
@@ -264,6 +288,7 @@ def somnolencia(nombre, chat):
                         ard.write(b"B")
         seg = time.time() - cerrado if cerrado else 0.0
         panel(frame, nombre, estado, color, seg, micros, metodo, valor, alarma, ard, bool(config.TG_TOKEN and chat))
+        dibujar_aviso(frame)
         cv2.imshow("Sistema - q para salir", frame)
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
