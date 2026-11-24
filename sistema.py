@@ -108,7 +108,42 @@ def contar_estable(elegido, estable, id_):
         estable = 1
     return elegido, estable
 
+FUENTE = cv2.FONT_HERSHEY_SIMPLEX
+BLANCO, GRIS = (255, 255, 255), (170, 170, 170)
 
+
+def panel(frame, nombre, estado, color, seg_cerrado, micros, metodo, valor, alarma, ard, tg):
+    h, w = frame.shape[:2]
+
+    # 1. Bandas oscuras semitransparentes arriba y abajo
+    capa = frame.copy()
+    cv2.rectangle(capa, (0, 0), (w, 60), (25, 25, 25), -1)
+    cv2.rectangle(capa, (0, h - 80), (w, h), (25, 25, 25), -1)
+    cv2.addWeighted(capa, 0.65, frame, 0.35, 0, frame)
+
+    # 2. Arriba: estado a la izquierda, conductor a la derecha
+    cv2.putText(frame, estado, (15, 42), FUENTE, 1.0, color, 2, cv2.LINE_AA)
+    txt = nombre.title()
+    (tw, _), _ = cv2.getTextSize(txt, FUENTE, 0.65, 2)
+    cv2.putText(frame, txt, (w - tw - 15, 38), FUENTE, 0.65, BLANCO, 2, cv2.LINE_AA)
+
+    # 3. Barra de "ojos cerrados": se llena hasta SEG_ALERTA
+    frac = min(seg_cerrado / config.SEG_ALERTA, 1.0)
+    col = (0, 200, 0) if frac < 0.5 else (0, 165, 255) if frac < 1 else (0, 0, 255)
+    x0, y0, ancho = 15, h - 62, w - 30
+    cv2.rectangle(frame, (x0, y0), (x0 + ancho, y0 + 12), (70, 70, 70), -1)
+    cv2.rectangle(frame, (x0, y0), (x0 + int(ancho * frac), y0 + 12), col, -1)
+    cv2.putText(frame, f"Ojos cerrados: {seg_cerrado:.1f} / {config.SEG_ALERTA} s", (x0, y0 - 6),
+                FUENTE, 0.45, GRIS, 1, cv2.LINE_AA)
+
+    # 4. Línea de datos (cv2.putText no dibuja tildes ni ñ: solo ASCII)
+    datos = (f"{metodo}: {valor}    Microsuenos: {micros}    "
+             f"Arduino: {'si' if ard else 'no'}    Telegram: {'si' if tg else 'no'}")
+    cv2.putText(frame, datos, (x0, h - 18), FUENTE, 0.5, BLANCO, 1, cv2.LINE_AA)
+
+    # 5. Alarma: borde rojo que parpadea 4 veces por segundo
+    if alarma and int(time.time() * 4) % 2 == 0:
+        cv2.rectangle(frame, (0, 0), (w - 1, h - 1), (0, 0, 255), 14)
 
 def identificar():
     caras, labels, nombres = db.datos_entrenamiento()
@@ -167,6 +202,7 @@ def somnolencia(nombre, chat):
     cerrado, alarma, micros, ultimo = None, False, 0, 0
     sin_rostro = None
     hablar("Bienvenido " + nombre)
+    metodo = "Prob. cerrado (CNN)" if CNN is not None else "EAR"
     while True:
         ok, frame = cam.read()
         if not ok:
@@ -176,6 +212,7 @@ def somnolencia(nombre, chat):
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         res = malla.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
         estado, color = "Sin rostro", (150, 150, 150)
+        valor = "-"
         if res.multi_face_landmarks:
             sin_rostro = None
             face = res.multi_face_landmarks[0]
@@ -189,8 +226,11 @@ def somnolencia(nombre, chat):
             if CNN is not None:
                 pc = prob_cerrado(gray, pts)
                 cerrado_ojo = pc is not None and pc > 0.5
+                valor = f"{pc:.2f}" if pc is not None else "-"
             else:
-                cerrado_ojo = (ear(pts[OJO_I]) + ear(pts[OJO_D])) / 2 < config.EAR_UMBRAL
+                e = (ear(pts[OJO_I]) + ear(pts[OJO_D])) / 2
+                cerrado_ojo = e < config.EAR_UMBRAL
+                valor = f"{e:.2f}"
             if cerrado_ojo:
                 cerrado = cerrado or time.time()
                 if time.time() - cerrado >= config.SEG_ALERTA:
@@ -222,8 +262,8 @@ def somnolencia(nombre, chat):
                     hablar("Mire al frente")
                     if ard:
                         ard.write(b"B")
-        cv2.putText(frame, estado, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1, color, 2)
-        cv2.putText(frame, "Conductor: " + nombre, (20, h - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+        seg = time.time() - cerrado if cerrado else 0.0
+        panel(frame, nombre, estado, color, seg, micros, metodo, valor, alarma, ard, bool(config.TG_TOKEN and chat))
         cv2.imshow("Sistema - q para salir", frame)
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
