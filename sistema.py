@@ -92,16 +92,41 @@ def mostrar_aviso(texto, color, seg=5):
     AVISO.update(texto=texto, color=color, hasta=time.time() + seg)
 
 
+def ubicacion():
+    # Ubicación APROXIMADA según la IP pública (nivel ciudad/barrio, puede errar varios km).
+    # ipinfo.io devuelve, por ejemplo: {"city": "Salta", "loc": "-24.7859,-65.4117", ...}
+    if not config.ENVIAR_UBICACION:
+        return None
+    try:
+        d = json.loads(urllib.request.urlopen("https://ipinfo.io/json", timeout=5).read().decode())
+        lat, lon = d["loc"].split(",")
+        return float(lat), float(lon), d.get("city", "")
+    except Exception:
+        return None
+
+
+def enviar(chat, metodo, **datos):
+    # metodo = "sendMessage" (texto) o "sendLocation" (mapa con un pin)
+    url = "https://api.telegram.org/bot%s/%s?%s" % (
+        config.TG_TOKEN, metodo, urllib.parse.urlencode({"chat_id": chat, **datos}))
+    return json.loads(urllib.request.urlopen(url, timeout=10).read().decode())
+
+
 def telegram(chat, texto):
     if not config.TG_TOKEN or not chat:
         return
-    url = "https://api.telegram.org/bot%s/sendMessage?%s" % (
-        config.TG_TOKEN, urllib.parse.urlencode({"chat_id": chat, "text": texto}))
+    u = ubicacion()
+    if u:
+        texto += f"\nUbicacion aproximada: {u[2]}"
     try:
-        r = json.loads(urllib.request.urlopen(url, timeout=10).read().decode())
+        r = enviar(chat, "sendMessage", text=texto)
         ch = r["result"]["chat"]                 # Telegram devuelve a quién le llegó
         quien = f"{ch.get('first_name', '')} {ch.get('last_name') or ''}".strip() or "el contacto"
-        mostrar_aviso(f"Alerta enviada por Telegram a {quien}", (0, 200, 0))
+        if u:
+            enviar(chat, "sendLocation", latitude=u[0], longitude=u[1])
+            mostrar_aviso(f"Alerta y ubicacion enviadas por Telegram a {quien}", (0, 200, 0))
+        else:
+            mostrar_aviso(f"Alerta enviada por Telegram a {quien}", (0, 200, 0))
     except Exception:
         mostrar_aviso("No se pudo enviar la alerta por Telegram", (0, 0, 255))
 

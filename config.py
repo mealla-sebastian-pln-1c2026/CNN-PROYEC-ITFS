@@ -8,6 +8,10 @@ TG_TOKEN = os.environ.get("TG_TOKEN", "")
 # Los scripts la abren con cv2.CAP_DSHOW: con el backend por defecto (MSMF) la Logitech tarda ~1 minuto en abrir.
 CAMARA = 0
 
+# Enviar la ubicación aproximada (según la IP) junto con la alerta de Telegram.
+# Es un dato personal: el conductor tiene que estar de acuerdo.
+ENVIAR_UBICACION = True
+
 UMBRAL_ROSTRO = 70
 FRAMES_CONFIRMAR = 15
 
